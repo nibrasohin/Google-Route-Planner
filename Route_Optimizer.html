@@ -1,0 +1,438 @@
+﻿<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml">
+
+<head>
+    <title></title>
+    <link rel="stylesheet" href="style.css">
+    <link rel="stylesheet" href="https://www.w3schools.com/w3css/4/w3.css">
+    <style type="text/css">
+        body {
+            font-family: Arial;
+            font-size: 10pt;
+        }
+    </style>
+</head>
+
+<body>
+    <script type="text/javascript" src="http://maps.googleapis.com/maps/api/js?sensor=false&libraries=places"></script>
+    <script type="text/javascript">
+        var newRouteId = 2;
+        var destinationList = [];
+        var distanceArray = [];
+        var source;
+        var directionsDisplay;
+        var directionsService = new google.maps.DirectionsService();
+        var mapEvent = google.maps.event;
+
+
+        var destinationIds = [];
+        google.maps.event.addDomListener(window, 'load', function () {
+            new google.maps.places.SearchBox(document.getElementById('txtSource'));
+            new google.maps.places.SearchBox(document.getElementById('destination'));
+            directionsDisplay = new google.maps.DirectionsRenderer({ 'draggable': true });
+        });
+
+        function addDomListener() {
+            destinationIds.forEach(function (el) {
+                new google.maps.places.SearchBox(document.getElementById(el));
+            });
+        }
+
+
+
+        function calculateRoute() {
+            var routeSummaryDiv = document.getElementById("routeSummary");
+            var service = new google.maps.DistanceMatrixService();
+            var mumbai = new google.maps.LatLng(18.9750, 72.8258);
+            var mapOptions = {
+                zoom: 7,
+                center: mumbai
+            };
+
+            map = new google.maps.Map(document.getElementById('dvMap'), mapOptions);
+            directionsDisplay.setMap(map);
+            routeSummaryDiv.innerHTML = '';
+            // directionsDisplay.setPanel(document.getElementById('dvPanel'));
+
+            //*********DIRECTIONS AND ROUTE**********************//
+            source = document.getElementById("txtSource").value;
+            destinationIds.push('destination');
+
+            destinationIds.forEach((id) => {
+                destinationList.push(document.getElementById(id).value);
+            });
+
+            service.getDistanceMatrix({
+                origins: [source],
+                destinations: destinationList,
+                travelMode: google.maps.TravelMode.DRIVING,
+                unitSystem: google.maps.UnitSystem.METRIC,
+                avoidHighways: false,
+                avoidTolls: false
+            }, function (response, status) {
+
+                var destination;
+                var waypointsList;
+
+                destination = getDestination(response.rows[0].elements);
+                waypointsList = generateWaypointsList();
+
+
+                var request = {
+                    origin: source,
+                    destination: destination,
+                    waypoints: waypointsList,
+                    optimizeWaypoints: true,
+                    travelMode: google.maps.TravelMode.DRIVING
+                };
+
+                directionsService.route(request, function (response, status) {
+                    if (status == google.maps.DirectionsStatus.OK) {
+
+                        //preprocess routeArray
+                        var srcDestNames = destinationNamesGenerator(source, destination, response.routes[0].waypoint_order, waypointsList);
+                        //setting route summary and map
+                        routeSummaryDiv.innerHTML += routeSummary(response.routes[0].legs, srcDestNames);
+                        directionsDisplay.setDirections(response);
+                    }
+                    else {
+                        alert("Unable to find the distance via road.");
+                    }
+                });
+
+            });
+        }
+
+        function routeSummary(routeArray, srcDestNames) {
+            var routeSummary = 'Optimized Route Summary<br/><br/>';
+            routeArray.forEach((route) => {
+                routeSummary += srcDestNames.shift().split(',')[0] + ' -> ' + srcDestNames.shift().split(',')[0] + ' [Distance: ' + route.distance.text + ', Duration: ' + route.duration.text + ']<br/>';
+            });
+            return routeSummary;
+        }
+
+        function destinationNamesGenerator(src, dest, waypointsOrder, waypointsList) {
+            var destNames = [];
+            destNames.push(src);
+            if (!waypointsOrder) {
+                destNames.push(waypointsList[0].location, waypointsList[0].location)
+            }
+            else {
+                waypointsOrder.forEach((waypoint) => {
+                    destNames.push(waypointsList[waypoint].location, waypointsList[waypoint].location);
+                });
+            }
+            destNames.push(dest);
+            return destNames;
+        }
+
+        function generateWaypointsList() {
+            var waypointsList = [];
+            destinationList.forEach((waypoint) => {
+                waypointsList.push({
+                    location: waypoint,
+                    stopover: true
+                })
+            });
+            return waypointsList;
+        }
+
+        function getDestination(routeList) {
+            var distance;
+            var maxDistance = 0;
+            var maxDistanceCounter = 0;
+            var furthestDestinationIndex = -1;
+            var destination;
+
+            routeList.forEach((routeInfo) => {
+                distance = parseFloat((routeInfo.distance.text.split(' ')[0]).split(',').join(''));
+                if (distance > maxDistance) {
+                    furthestDestinationIndex = maxDistanceCounter;
+                    maxDistance = distance;
+                }
+                maxDistanceCounter++;
+            });
+            destination = destinationList[furthestDestinationIndex];
+            destinationList.splice(furthestDestinationIndex, 1);
+            return destination;
+        }
+
+        function addRoute() {
+            var routeBody = document.getElementById("newRouteBody");
+            var br = document.createElement("br");
+
+            var newlabel = document.createElement("Label");
+            newlabel.innerHTML = "Destination " + newRouteId + ": ";
+            newlabel.setAttribute("class", "labelDst");
+            routeBody.appendChild(newlabel);
+
+            var newRoute = document.createElement("input");
+            newRoute.setAttribute("type", "text");
+            newRoute.setAttribute("id", "destination" + newRouteId.toString());
+            newRoute.setAttribute("class", "w3-input w3-border w3-round-large");
+            newRoute.setAttribute("style", "width: 400px");
+            newRoute.setAttribute("value", "Winnipeg, MB, Canada");
+
+            routeBody.appendChild(newRoute);
+            routeBody.appendChild(document.createElement("br"));
+            destinationIds.push("destination" + newRouteId.toString());
+            addDomListener();
+            newRouteId++;
+        }
+
+        // function GetRoute() {
+        //     var mumbai = new google.maps.LatLng(18.9750, 72.8258);
+        //     var mapOptions = {
+        //         zoom: 7,
+        //         center: mumbai
+        //     };
+        //     map = new google.maps.Map(document.getElementById('dvMap'), mapOptions);
+        //     directionsDisplay.setMap(map);
+        //     // directionsDisplay.setPanel(document.getElementById('dvPanel'));
+
+        //     //*********DIRECTIONS AND ROUTE**********************//
+        //     source = document.getElementById("txtSource").value;
+        //     destination = document.getElementById("destination").value;
+        //     destinationArray.push(source, destination);
+        //     array.forEach((dest) => {
+        //         destinationArray.push(document.getElementById(dest).value);
+        //     });
+        //     destinationArray.push(source, destination);
+
+        //     var request = {
+        //         origin: source,
+        //         destination: destination,
+        //         travelMode: google.maps.TravelMode.DRIVING
+        //     };
+        //     directionsService.route(request, function (response, status) {
+        //         if (status == google.maps.DirectionsStatus.OK) {
+        //             directionsDisplay.setDirections(response);
+        //         }
+        //     });
+
+        //     //*********DISTANCE AND DURATION**********************//
+        //     var service = new google.maps.DistanceMatrixService();
+        //     var counter = 0;
+        //     service.getDistanceMatrix({
+        //         origins: destinationArray,
+        //         destinations: destinationArray,
+        //         travelMode: google.maps.TravelMode.DRIVING,
+        //         unitSystem: google.maps.UnitSystem.METRIC,
+        //         avoidHighways: false,
+        //         avoidTolls: false
+        //     }, function (response, status) {
+        //         if (status == google.maps.DistanceMatrixStatus.OK && response.rows[0].elements[0].status != "ZERO_RESULTS") {
+        //             distanceArray.push(response.rows);
+        //             var distance = response.rows[0].elements[0].distance.text;
+        //             var duration = response.rows[0].elements[0].duration.text;
+        //             var dvDistance = document.getElementById("routeSummary");
+        //             dvDistance.innerHTML = "";
+        //             // dvDistance.innerHTML += "Distance: " + distance + "<br />";
+        //             // dvDistance.innerHTML += "Duration:" + duration;
+        //             var optimizedRoute = routeProcessor(destinationArray, destinationArray, response.rows);
+        //             var routeSummary = summarizeRoute(optimizedRoute);
+        //             var mapRoute = processRoutesForMap(optimizedRoute);
+
+
+
+        //             var request = {
+        //                 origin: mapRoute.shift().location,
+        //                 destination: mapRoute.pop().location,
+        //                 waypoints: mapRoute,
+        //                 optimizeWaypoints: true,
+        //                 travelMode: google.maps.TravelMode.DRIVING
+        //             };
+        //             directionsService.route(request, function (response, status) {
+        //                 if (status == google.maps.DirectionsStatus.OK) {
+        //                     directionsDisplay.setDirections(response);
+        //                 }
+        //             });
+
+        //             dvDistance.innerHTML += routeSummary;
+        //             console.log('Optimized Route: ', optimizedRoute);
+        //         } else {
+        //             alert("Unable to find the distance via road.");
+        //         }
+        //     });
+
+
+        // }
+
+        // function routeProcessor(origin, destination, elements) {
+        //     var destDistanceMapper;
+        //     var processedRoutes = {};
+        //     var orgLoopCounter = 0;
+        //     var destLoopCounter;
+
+        //     origin.forEach(function (org) {
+        //         destLoopCounter = 0;
+        //         destDistanceMapper = {};
+        //         destination.forEach(function (dest) {
+        //             destDistanceMapper[dest] = elements[orgLoopCounter].elements[destLoopCounter++].distance.text;
+        //         });
+        //         delete destDistanceMapper[org];
+        //         processedRoutes[org] = destDistanceMapper;
+        //         orgLoopCounter++;
+        //     });
+
+        //     return optimizer(origin[0], processedRoutes);
+        // }
+
+        // function optimizer(source, processedRoutes) {
+
+        //     var destName;
+        //     var distanceText;
+
+        //     var minimumDistance;
+        //     var currSource = source;
+
+        //     var destAddress = {};
+        //     var routeElement = {};
+        //     var routeOptions = {};
+
+        //     var optimizedRoute = [];
+        //     var routesToDiscard = [];
+        //     routesToDiscard.push(currSource);
+        //     while (Object.keys(processedRoutes).length > 1) {
+
+        //         minimumDistance = Number.MAX_SAFE_INTEGER + 1;
+        //         routeOptions = Object.keys(processedRoutes[currSource]);
+        //         routesToDiscard.indexOf(currSource) >= 0 ? routesToDiscard.push(currSource) : null;
+
+        //         routeOptions.forEach(function (route) {
+        //             //demo: '123 km' -> ['123', 'km']
+        //             distanceText = (processedRoutes[currSource][route].split(' ')[0]).split(',').join('');
+        //             var distance = parseFloat(distanceText);
+        //             var unit = processedRoutes[currSource][route].split(' ')[1];
+        //             if (distance < minimumDistance && routesToDiscard.indexOf(route) < 0) {
+        //                 destName = route;
+        //                 destAddress = {};
+        //                 destAddress[destName] = distance.toString() + ' ' + unit;
+        //                 minimumDistance = distance;
+        //             }
+        //         });
+        //         routeElement = {};
+        //         routeElement[currSource] = destAddress;
+        //         delete processedRoutes[currSource];
+        //         currSource = destName;
+        //         optimizedRoute.push(routeElement);
+        //         routesToDiscard.indexOf(currSource) < 0 ? routesToDiscard.push(currSource) : null;
+        //     }
+        //     return optimizedRoute;
+        // }
+
+        // function processRoutesForMap(optimizedRoute) {
+        //     var mapRoute = [];
+        //     var lastRoute = '';
+        //     optimizedRoute.forEach(function (route) {
+        //         for (var r in route) {
+        //             mapRoute.push({
+        //                 location: r,
+        //                 stopover: true
+        //             });
+        //             lastRoute = route[r];
+        //         }
+        //     });
+        //     mapRoute.push({
+        //         location: Object.keys(lastRoute)[0],
+        //         stopover: true
+        //     });
+        //     return mapRoute;
+        // }
+
+        // function summarizeRoute(optimizedRoute) {
+        //     var routeSummary = 'Your Optimized Route Summary: <br/><br/>';
+        //     var routeCounter = 1;
+        //     optimizedRoute.forEach(function (route) {
+        //         for (var r in route) {
+        //             for (var d in route[r]) {
+        //                 routeSummary += (routeCounter++) + '. ' + r.split(',')[0] + ' -> ' + d.split(',')[0] + ' (' + route[r][d] + ')<br/>';
+        //             }
+        //         }
+        //     });
+        //     return routeSummary;
+        // }
+
+
+
+
+    </script>
+
+    <div id="mainContainer">
+        <h1>Google Route Optimizer</h1>
+        <div class="inputBox">
+            <div id="newRouteBody">
+                <label class="labelSrc">Source:</label>
+                <input type="text" class="w3-input w3-border w3-round-large" id="txtSource" value="Toronto, ON, Canada" style="width: 400px"
+                />
+                <br />
+                <label class="labelDst">Destination 1:</label>
+                <input type="text" id="destination" class="w3-input w3-border w3-round-large" value="Calgary, AB, Canada" style="width: 400px"
+                />
+                <br />
+            </div>
+            <input type="button" class="button" value="Add Destination" onclick="addRoute()" />
+            <input type="button" class="button" value="Optimize Route" onclick="calculateRoute()" />
+        </div>
+
+        <br />
+        <br />
+        <hr />
+        <div id="routeSummary">
+
+        </div>
+        <div class="map">
+            <table border="0" cellpadding="0" cellspacing="3">
+                <tr>
+                    <td>
+                        <div id="dvMap" style="width: 500px; height: 500px">
+                        </div>
+                    </td>
+                    <td>
+                        <div id="dvPanel" style="width: 500px; height: 500px">
+                        </div>
+                    </td>
+                </tr>
+            </table>
+        </div>
+        <!-- <div id="routeSummary">
+
+        </div> -->
+    </div>
+    <!-- <table border="0" cellpadding="0" cellspacing="3">
+        <tr>
+            <td colspan="2" id="tableRow">
+                Source:
+                <input type="text" id="txtSource" value="Toronto, ON, Canada" style="width: 400px" />
+                <div id="newRouteBody">
+                    <br /> Destination - 1:
+                    <input type="text" id="destination" value="Calgary, AB, Canada" style="width: 355px" />
+                    <br />
+                    <br />
+                </div>
+                <input type="button" value="Get Route" onclick="GetRoute()" />
+                <input type="button" value="Add Route" onclick="addRoute()" />
+                <hr />
+            </td>
+        </tr>
+        <tr>
+            <td colspan="2">
+                <div id="dvDistance">
+                </div>
+            </td>
+        </tr>
+        <tr>
+            <td>
+                <div id="dvMap" style="width: 500px; height: 500px">
+                </div>
+            </td>
+            <td>
+                <div id="dvPanel" style="width: 500px; height: 500px">
+                </div>
+            </td>
+        </tr>
+    </table> -->
+    <br />
+</body>
+
+</html>
