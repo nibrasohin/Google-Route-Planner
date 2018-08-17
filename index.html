@@ -28,7 +28,7 @@
         var destinationIds = [];
         google.maps.event.addDomListener(window, 'load', function () {
             new google.maps.places.SearchBox(document.getElementById('txtSource'));
-            new google.maps.places.SearchBox(document.getElementById('destination'));
+            new google.maps.places.SearchBox(document.getElementById('destination1'));
             directionsDisplay = new google.maps.DirectionsRenderer({ 'draggable': true });
         });
 
@@ -56,7 +56,9 @@
 
             //*********DIRECTIONS AND ROUTE**********************//
             source = document.getElementById("txtSource").value;
-            destinationIds.push('destination');
+            if(destinationIds.indexOf('destination1') === -1 && !!document.getElementById("destination1")){
+                destinationIds.push('destination1');
+            }
 
             destinationIds.forEach((id) => {
                 destinationList.push(document.getElementById(id).value);
@@ -93,6 +95,7 @@
                         var srcDestNames = destinationNamesGenerator(source, destination, response.routes[0].waypoint_order, waypointsList);
                         //setting route summary and map
                         routeSummaryDiv.innerHTML += routeSummary(response.routes[0].legs, srcDestNames);
+                        destinationList = [];
                         directionsDisplay.setDirections(response);
                     }
                     else {
@@ -159,25 +162,48 @@
 
         function addRoute() {
             var routeBody = document.getElementById("newRouteBody");
-            var br = document.createElement("br");
+            var br1 = document.createElement("br");
+            br1.setAttribute("id", "break"+newRouteId);
+            var br2 = document.createElement("br");
+            br2.setAttribute("id", newRouteId+"break");
 
             var newlabel = document.createElement("Label");
-            newlabel.innerHTML = "Destination " + newRouteId + ": ";
+            newlabel.setAttribute("id","label"+newRouteId);
+            newlabel.innerHTML = "Destination:";
             newlabel.setAttribute("class", "labelDst");
             routeBody.appendChild(newlabel);
 
             var newRoute = document.createElement("input");
             newRoute.setAttribute("type", "text");
-            newRoute.setAttribute("id", "destination" + newRouteId.toString());
+            newRoute.setAttribute("id", "destination" + newRouteId);
             newRoute.setAttribute("class", "w3-input w3-border w3-round-large");
             newRoute.setAttribute("style", "width: 400px");
             newRoute.setAttribute("value", "Winnipeg, MB, Canada");
 
+            var deleteButton = document.createElement("input");
+            deleteButton.setAttribute("type","button" );
+            deleteButton.setAttribute("id","del"+newRouteId );
+            deleteButton.setAttribute("value","Delete" );
+            deleteButton.setAttribute("onclick","removeRoute(this.id);" );
+
             routeBody.appendChild(newRoute);
-            routeBody.appendChild(document.createElement("br"));
-            destinationIds.push("destination" + newRouteId.toString());
+            routeBody.appendChild(deleteButton);
+            routeBody.appendChild(br1);
+            routeBody.appendChild(br2);
+            destinationIds.push("destination" + newRouteId);
             addDomListener();
             newRouteId++;
+        }
+
+        function removeRoute(id){
+            var idCounter = id.split('del')[1];
+            var routeBody = document.getElementById("newRouteBody");
+            routeBody.removeChild(document.getElementById("destination"+idCounter));
+            routeBody.removeChild(document.getElementById("label"+idCounter));
+            routeBody.removeChild(document.getElementById("break"+idCounter));
+            routeBody.removeChild(document.getElementById(idCounter+"break"));
+            routeBody.removeChild(document.getElementById(id));
+            destinationIds = destinationIds.filter(dest => dest !== 'destination'+idCounter);
         }
     </script>
 
@@ -185,14 +211,16 @@
         <h1>Google Route Optimizer</h1>
         <div class="inputBox">
             <div id="newRouteBody">
-                <label class="labelSrc">Source:</label>
+                <label id="label0" class="labelSrc">Source:</label>
                 <input type="text" class="w3-input w3-border w3-round-large" id="txtSource" value="Toronto, ON, Canada" style="width: 400px"
                 />
                 <br />
-                <label class="labelDst">Destination 1:</label>
-                <input type="text" id="destination" class="w3-input w3-border w3-round-large" value="Calgary, AB, Canada" style="width: 400px"
+                <label id="label1" class="labelDst">Destination:</label>
+                <input type="text" id="destination1" class="w3-input w3-border w3-round-large" value="Calgary, AB, Canada" style="width: 400px"
                 />
-                <br />
+                <input type="button" id="del1" class="" value="Delete" onclick="removeRoute(this.id);"/>
+                <br id="break1"/>
+                <br id="1break"/>
             </div>
             <input type="button" class="button" value="Add Destination" onclick="addRoute()" />
             <input type="button" class="button" value="Optimize Route" onclick="calculateRoute()" />
