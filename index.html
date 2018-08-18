@@ -56,54 +56,64 @@
 
             //*********DIRECTIONS AND ROUTE**********************//
             source = document.getElementById("txtSource").value;
-            if(destinationIds.indexOf('destination1') === -1 && !!document.getElementById("destination1")){
+            if (destinationIds.indexOf('destination1') === -1 && !!document.getElementById("destination1")) {
                 destinationIds.push('destination1');
             }
 
+
+
             destinationIds.forEach((id) => {
-                destinationList.push(document.getElementById(id).value);
+                if (!!document.getElementById(id).value) {
+                    destinationList.push(document.getElementById(id).value);
+                }
             });
 
-            service.getDistanceMatrix({
-                origins: [source],
-                destinations: destinationList,
-                travelMode: google.maps.TravelMode.DRIVING,
-                unitSystem: google.maps.UnitSystem.METRIC,
-                avoidHighways: false,
-                avoidTolls: false
-            }, function (response, status) {
+            if (destinationList.length <= 0) {
+                alert("Please enter a destination to optimize your route!");
+            }
+            else {
+                service.getDistanceMatrix({
+                    origins: [source],
+                    destinations: destinationList,
+                    travelMode: google.maps.TravelMode.DRIVING,
+                    unitSystem: google.maps.UnitSystem.METRIC,
+                    avoidHighways: false,
+                    avoidTolls: false
+                }, function (response, status) {
 
-                var destination;
-                var waypointsList;
+                    var destination;
+                    var waypointsList;
 
-                destination = getDestination(response.rows[0].elements);
-                waypointsList = generateWaypointsList();
+                    destination = getDestination(response.rows[0].elements);
+                    waypointsList = generateWaypointsList();
 
 
-                var request = {
-                    origin: source,
-                    destination: destination,
-                    waypoints: waypointsList,
-                    optimizeWaypoints: true,
-                    travelMode: google.maps.TravelMode.DRIVING
-                };
+                    var request = {
+                        origin: source,
+                        destination: destination,
+                        waypoints: waypointsList,
+                        optimizeWaypoints: true,
+                        travelMode: google.maps.TravelMode.DRIVING
+                    };
 
-                directionsService.route(request, function (response, status) {
-                    if (status == google.maps.DirectionsStatus.OK) {
+                    directionsService.route(request, function (response, status) {
+                        if (status == google.maps.DirectionsStatus.OK) {
 
-                        //preprocess routeArray
-                        var srcDestNames = destinationNamesGenerator(source, destination, response.routes[0].waypoint_order, waypointsList);
-                        //setting route summary and map
-                        routeSummaryDiv.innerHTML += routeSummary(response.routes[0].legs, srcDestNames);
-                        destinationList = [];
-                        directionsDisplay.setDirections(response);
-                    }
-                    else {
-                        alert("Unable to find the distance via road.");
-                    }
+                            //preprocess routeArray
+                            var srcDestNames = destinationNamesGenerator(source, destination, response.routes[0].waypoint_order, waypointsList);
+                            //setting route summary and map
+                            routeSummaryDiv.innerHTML += routeSummary(response.routes[0].legs, srcDestNames);
+                            destinationList = [];
+                            directionsDisplay.setDirections(response);
+                        }
+                        else {
+                            alert("Unable to find the distance via road.");
+                        }
+                    });
+
                 });
+            }
 
-            });
         }
 
         function routeSummary(routeArray, srcDestNames) {
@@ -163,12 +173,12 @@
         function addRoute() {
             var routeBody = document.getElementById("newRouteBody");
             var br1 = document.createElement("br");
-            br1.setAttribute("id", "break"+newRouteId);
+            br1.setAttribute("id", "break" + newRouteId);
             var br2 = document.createElement("br");
-            br2.setAttribute("id", newRouteId+"break");
+            br2.setAttribute("id", newRouteId + "break");
 
             var newlabel = document.createElement("Label");
-            newlabel.setAttribute("id","label"+newRouteId);
+            newlabel.setAttribute("id", "label" + newRouteId);
             newlabel.innerHTML = "Destination:";
             newlabel.setAttribute("class", "labelDst");
             routeBody.appendChild(newlabel);
@@ -181,10 +191,10 @@
             newRoute.setAttribute("value", "Winnipeg, MB, Canada");
 
             var deleteButton = document.createElement("input");
-            deleteButton.setAttribute("type","button" );
-            deleteButton.setAttribute("id","del"+newRouteId );
-            deleteButton.setAttribute("value","Delete" );
-            deleteButton.setAttribute("onclick","removeRoute(this.id);" );
+            deleteButton.setAttribute("type", "button");
+            deleteButton.setAttribute("id", "del" + newRouteId);
+            deleteButton.setAttribute("value", "Delete");
+            deleteButton.setAttribute("onclick", "removeRoute(this.id);");
 
             routeBody.appendChild(newRoute);
             routeBody.appendChild(deleteButton);
@@ -195,15 +205,15 @@
             newRouteId++;
         }
 
-        function removeRoute(id){
+        function removeRoute(id) {
             var idCounter = id.split('del')[1];
             var routeBody = document.getElementById("newRouteBody");
-            routeBody.removeChild(document.getElementById("destination"+idCounter));
-            routeBody.removeChild(document.getElementById("label"+idCounter));
-            routeBody.removeChild(document.getElementById("break"+idCounter));
-            routeBody.removeChild(document.getElementById(idCounter+"break"));
+            routeBody.removeChild(document.getElementById("destination" + idCounter));
+            routeBody.removeChild(document.getElementById("label" + idCounter));
+            routeBody.removeChild(document.getElementById("break" + idCounter));
+            routeBody.removeChild(document.getElementById(idCounter + "break"));
             routeBody.removeChild(document.getElementById(id));
-            destinationIds = destinationIds.filter(dest => dest !== 'destination'+idCounter);
+            destinationIds = destinationIds.filter(dest => dest !== 'destination' + idCounter);
         }
     </script>
 
@@ -218,9 +228,9 @@
                 <label id="label1" class="labelDst">Destination:</label>
                 <input type="text" id="destination1" class="w3-input w3-border w3-round-large" value="Calgary, AB, Canada" style="width: 400px"
                 />
-                <input type="button" id="del1" class="" value="Delete" onclick="removeRoute(this.id);"/>
-                <br id="break1"/>
-                <br id="1break"/>
+                <input type="button" id="del1" class="" value="Delete" onclick="removeRoute(this.id);" />
+                <br id="break1" />
+                <br id="1break" />
             </div>
             <input type="button" class="button" value="Add Destination" onclick="addRoute()" />
             <input type="button" class="button" value="Optimize Route" onclick="calculateRoute()" />
