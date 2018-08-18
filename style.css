@@ -1,3 +1,8 @@
+body {
+    font-family: Arial;
+    font-size: 10pt;
+}
+
 #mainContainer{
     /* display: table; */
     margin-right: auto;
@@ -34,3 +39,4 @@ h1{
     border-left: 6px solid red;
     background-color: lightgrey;
 }
+
